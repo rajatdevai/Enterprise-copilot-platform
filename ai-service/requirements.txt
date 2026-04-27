@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+openai
+faiss-cpu
+numpy
+sentence-transformers
+Pillow
+python-multipart
+redis
+sqlalchemy
+psycopg2-binary
+tiktoken

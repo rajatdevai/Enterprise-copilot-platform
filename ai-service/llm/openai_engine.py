@@ -34,3 +34,30 @@ class OpenAIEngine:
                     
         except Exception as e:
             yield f"Error in AI stream: {str(e)}"
+
+    async def summarize(self, messages: List[Dict]) -> str:
+        """
+        Summarizes a conversation fragment using a cost-effective model.
+        """
+        if not messages:
+            return ""
+            
+        summary_prompt = "Summarize the following conversation fragment concisely, focusing on key facts and user intent. Keep the summary under 150 words."
+        
+        # Prepare content for summarization
+        conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+        
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini", # Use mini for efficiency
+                messages=[
+                    {"role": "system", "content": summary_prompt},
+                    {"role": "user", "content": conversation_text}
+                ],
+                temperature=0.3,
+                max_tokens=300
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Summarization error: {e}")
+            return "History summarized."

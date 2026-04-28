@@ -31,6 +31,25 @@ class MemoryManager:
             
         return trimmed_history
 
+    def should_compact(self, history: List[Dict], threshold: int = 10) -> bool:
+        """
+        Determines if the history has enough messages to warrant compaction.
+        Threshold is the number of messages.
+        """
+        return len(history) > threshold
+
+    def prepare_compact_chunks(self, history: List[Dict], keep_recent: int = 4) -> tuple[List[Dict], List[Dict]]:
+        """
+        Splits history into old messages (to be summarized) and 
+        recent messages (to be kept as is).
+        """
+        if len(history) <= keep_recent:
+            return [], history
+            
+        old_messages = history[:-keep_recent]
+        recent_messages = history[-keep_recent:]
+        return old_messages, recent_messages
+
     def format_for_openai(self, history: List[Dict], system_prompt: str) -> List[Dict]:
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(history)

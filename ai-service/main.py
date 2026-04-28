@@ -61,8 +61,14 @@ async def chat_stream(
     elif intent == Intent.DOCUMENT_ANALYSIS or has_files:
         system_prompt = SYSTEM_PROMPTS["FILES"]
 
-    # 3. Memory Optimization (Sliding Window)
-    optimized_history = memory_manager.trim_history(history)
+    # 3. Memory Optimization (Context Compaction & Sliding Window)
+    if memory_manager.should_compact(history):
+        old, recent = memory_manager.prepare_compact_chunks(history)
+        summary = await llm_engine.summarize(old)
+        optimized_history = [{"role": "system", "content": f"Previous conversation summary: {summary}"}]
+        optimized_history.extend(recent)
+    else:
+        optimized_history = memory_manager.trim_history(history)
     
     # Construct Messages
     messages = [{"role": "system", "content": system_prompt}]

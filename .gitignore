@@ -1,0 +1,36 @@
+# Node.js
+node_modules/
+dist/
+.npm
+.eslintcache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+
+# Environment / Secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Project Specific
+uploads/
+*.faiss
+*.index
+infra/postgres-data/

@@ -1,26 +1,92 @@
 services:
-  api-gateway:
-    build: ./api-gateway
+  nginx:
+    image: nginx:alpine
     ports:
-      - "3000:3000"
-    environment:
-      - AI_SERVICE_URL=http://ai-service:8000
-      - DATABASE_URL=postgresql://user:password@postgres:5432/copilot
+      - "80:80"
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - ai-service
-      - postgres
+      - gateway-service
+      - frontend
 
-  ai-service:
-    build: ./ai-service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "5173:5173"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - VITE_API_URL=/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  gateway-service:
+    build: ./gateway-service
+    environment:
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - ORCHESTRATOR_URL=http://ai-orchestrator:8001
       - REDIS_HOST=redis
     depends_on:
       - redis
+      - auth-service
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://user:password@postgres:5432/copilot
+      - JWT_SECRET=${JWT_SECRET:-supersecret}
+    depends_on:
+      - postgres
+
+  ai-orchestrator:
+    build: ./ai-orchestrator
+    environment:
+      - PORT=8001
+      - AGENT_SERVICE_URL=http://agent-service:8002
+      - RETRIEVAL_SERVICE_URL=http://retrieval-service:8003
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - kafka
+      - redis
+
+  embedding-service:
+    build: ./embedding-service
+    environment:
+      - PORT=8004
     volumes:
-      - ./ai-service:/app
+      - ./embedding-service/models:/app/models
+
+  retrieval-service:
+    build: ./retrieval-service
+    environment:
+      - PORT=8003
+      - EMBEDDING_SERVICE_URL=http://embedding-service:8004
+    volumes:
+      - ./retrieval-service/indexes:/app/indexes
+
+  document-service:
+    build: ./document-service
+    environment:
+      - PORT=8005
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    volumes:
+      - ./document-service/uploads:/app/uploads
+
+  agent-service:
+    build: ./agent-service
+    environment:
+      - PORT=8002
+    depends_on:
+      - redis
+
+  worker-service:
+    build: ./worker-service
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - DATABASE_URL=postgresql://user:password@postgres:5432/copilot
 
   postgres:
     image: postgres:15-alpine
@@ -38,7 +104,6 @@ services:
     ports:
       - "6379:6379"
 
-  # Scalability: Async Message Queue
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
